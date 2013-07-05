@@ -214,7 +214,7 @@ if not tasks:
 
 # Traverse into subdirectories until the --traverse depth is reached
 count = 0
-while (count <= traverse):
+while (count < int(traverse) + 1):
     count = count + 1
     wildcards = '*/' * count
     for name in glob.glob(wildcards + 'sites/all/modules'):
