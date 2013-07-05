@@ -172,32 +172,31 @@ def createTask(name, attributes):
 # Process a Drupal directory (dir MUST be a Drupal directory
 # as we're not checking this here!)
 def processDir(dir):
-    if dir == 'umext' or dir == 'hin':
-        os.chdir(dir)
-        printMessage.ok('Checking "%s" for updates...' % dir)
-        drush = subprocess.Popen([drush_app, 'pm-update', '--pipe', '--simulate',
-                                 '--security-only'],
-                                 stdout=subprocess.PIPE,
-                                 )
-        results = drush.stdout.read()
-        if results:
-            lines = results.split("\n")
-            for line in lines:
-                if len(line) > 5:
-                    task_name = system_name + ' ' + dir + ' ' + line.replace('SECURITY-UPDATE-available', '')
-                    task_id = findTaskByName(task_name, tasks)
-                    if not task_id:
-                        attributes = {}
-                        created_task = createTask(task_name, attributes)
-                        if created_task:
-                            task_id = created_task['task_id']
-                            printMessage.ok('Task doesn\'t exist; created new task #%d "%s"' % (task_id, task_name))
-                        else:
-                            printMessage.err('Task doesn\'t exist and could not create task "%s"' % taskname)
+    os.chdir(dir)
+    printMessage.ok('Checking "%s" for updates...' % dir)
+    drush = subprocess.Popen([drush_app, 'pm-update', '--pipe', '--simulate',
+                             '--security-only'],
+                             stdout=subprocess.PIPE,
+                             )
+    results = drush.stdout.read()
+    if results:
+        lines = results.split("\n")
+        for line in lines:
+            if len(line) > 5:
+                task_name = system_name + ' ' + dir + ' ' + line.replace('SECURITY-UPDATE-available', '')
+                task_id = findTaskByName(task_name, tasks)
+                if not task_id:
+                    attributes = {}
+                    created_task = createTask(task_name, attributes)
+                    if created_task:
+                        task_id = created_task['task_id']
+                        printMessage.ok('Task doesn\'t exist; created new task #%d "%s"' % (task_id, task_name))
                     else:
-                        printMessage.ok('Task already exists (#%d) "%s"' % (task_id, task_name))
+                        printMessage.err('Task doesn\'t exist and could not create task "%s"' % taskname)
+                else:
+                    printMessage.ok('Task already exists (#%d) "%s"' % (task_id, task_name))
 
-        os.chdir(scandir)
+    os.chdir(scandir)
 
 # Clean up the paths to fix any problems we might
 # have with user paths (--dir=~/xyz won't work otherwise)
