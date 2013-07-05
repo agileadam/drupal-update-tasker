@@ -219,3 +219,6 @@ while (count <= traverse):
     wildcards = '*/' * count
     for name in glob.glob(wildcards + 'sites/all/modules'):
         processDir(name.replace('/sites/all/modules', ''))
+
+printMessage.ok('Finished checking sites for required updates.')
+sys.exit()
