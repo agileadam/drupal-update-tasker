@@ -2,14 +2,10 @@
 import sys
 import os
 import subprocess
-import argparse
 import glob
 import requests
 import json
 from ConfigParser import SafeConfigParser
-
-parser = argparse.ArgumentParser(description='Scans a server for sites that need Drupal updates, and creates tasks in Active Collab for each update detected.')
-args = parser.parse_args()
 
 class printMessage():
     @staticmethod

@@ -1,7 +1,5 @@
 This is a python script that scans a server for sites that need Drupal updates, and creates a task in Active Collab for each update required.
 
-*The first time you run the script you should run it with the -h or --help option.*
-
 # Requirements
 
 * Drush
