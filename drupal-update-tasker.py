@@ -4,21 +4,24 @@ import os
 import subprocess
 import glob
 import requests
-import json
+import logging
 from ConfigParser import SafeConfigParser
 
-class printMessage():
-    @staticmethod
-    def ok(text):
-        print '[  \033[92mOK\033[0m   ]   %s' % text
+LOG = logging.getLogger(__name__)
+LOG.setLevel(logging.DEBUG)
+formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", "%Y-%m-%d %H:%M:%S")
 
-    @staticmethod
-    def err(text):
-        print '[ \033[91mERROR\033[0m ]   %s' % text
+# File logging
+#fh = logging.FileHandler("result.log")
+#fh.setLevel(logging.DEBUG)
+#fh.setFormatter(formatter)
+#LOG.addHandler(fh)
 
-    @staticmethod
-    def warn(text):
-        print '[ \033[93mWARN \033[0m ]   %s' % text
+# Console logging
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+ch.setFormatter(formatter)
+LOG.addHandler(ch)
 
 def writeBlankConfig():
     try:
@@ -42,7 +45,7 @@ def writeBlankConfig():
             configfile.write("\n\n# OPTIONAL: The category ID under which the tasks will be created.\n# Get this from the categories table in the database.\n# Example: category_id = 1820")
             configfile.write("\ncategory_id = ")
     except IOError:
-        printMessage.err('Could not create template config file.')
+        LOG.error('Could not create template config file.')
         sys.exit()
 
 def processConfig(configfile_path):
@@ -74,13 +77,11 @@ try:
         processConfig(configfile_path)
 except IOError:
     writeBlankConfig()
-    printMessage.warn('No config file found. Created a blank config file. ' + \
-        'Please edit \033[92m%s\033[0m and try again.' % configfile_path)
+    LOG.error('No config file found. Created a blank config file. Please edit %s and try again.' % configfile_path)
     sys.exit()
 
 if not scandir or not traverse or not system_name or not collab_api_url or not collab_api_token or not collab_project_id:
-    printMessage.err('Missing required settings. ' + \
-        'Please edit \033[92m%s\033[0m and try again.' % configfile_path)
+    LOG.error('Missing required settings. Please edit %s and try again.' % configfile_path)
     sys.exit()
 
 # Emulate the which binary
@@ -173,7 +174,7 @@ def createTask(name, attributes):
 # as we're not checking this here!)
 def processDir(dir):
     os.chdir(dir)
-    printMessage.ok('Checking "%s" for updates...' % dir)
+    LOG.info('Checking "%s" for updates...' % dir)
     drush = subprocess.Popen([drush_app, 'pm-update', '--pipe', '--simulate',
                              '--security-only'],
                              stdout=subprocess.PIPE,
@@ -190,11 +191,11 @@ def processDir(dir):
                     created_task = createTask(task_name, attributes)
                     if created_task:
                         task_id = created_task['task_id']
-                        printMessage.ok('Task doesn\'t exist; created new task #%d "%s"' % (task_id, task_name))
+                        LOG.info('Task doesn\'t exist; created new task #%d "%s"' % (task_id, task_name))
                     else:
-                        printMessage.err('Task doesn\'t exist and could not create task "%s"' % taskname)
+                        LOG.error('Task doesn\'t exist and could not create task "%s"' % task_name)
                 else:
-                    printMessage.ok('Task already exists (#%d) "%s"' % (task_id, task_name))
+                    LOG.info('Task already exists (#%d) "%s"' % (task_id, task_name))
 
     os.chdir(scandir)
 
@@ -220,5 +221,5 @@ while (count < int(traverse) + 1):
     for name in glob.glob(wildcards + 'sites/all/modules'):
         processDir(name.replace('/sites/all/modules', ''))
 
-printMessage.ok('Finished checking sites for required updates.')
+LOG.info('Finished checking sites for required updates.')
 sys.exit()
