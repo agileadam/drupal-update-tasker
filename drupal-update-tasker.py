@@ -23,7 +23,8 @@ ch.setLevel(logging.INFO)
 ch.setFormatter(formatter)
 LOG.addHandler(ch)
 
-def writeBlankConfig():
+
+def write_blank_config():
     try:
         with open(configfile_path, 'w') as configfile:
             configfile.write("[system_settings]")
@@ -48,7 +49,8 @@ def writeBlankConfig():
         LOG.error('Could not create template config file.')
         sys.exit()
 
-def processConfig(configfile_path):
+
+def process_config(configfile_path):
     global scandir
     global traverse
     global system_name
@@ -74,15 +76,16 @@ configfile_path = os.path.join(os.path.expanduser('~'), '.drupal_update_tasker')
 try:
     with open(configfile_path) as configfile:
         # The file exists, so process it (note that we're passing the path, not the file object)
-        processConfig(configfile_path)
+        process_config(configfile_path)
 except IOError:
-    writeBlankConfig()
+    write_blank_config()
     LOG.error('No config file found. Created a blank config file. Please edit %s and try again.' % configfile_path)
     sys.exit()
 
 if not scandir or not traverse or not system_name or not collab_api_url or not collab_api_token or not collab_project_id:
     LOG.error('Missing required settings. Please edit %s and try again.' % configfile_path)
     sys.exit()
+
 
 # Emulate the which binary
 # http://stackoverflow.com/a/377028
@@ -96,6 +99,7 @@ def which(program):
             return program
     else:
         for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
             exe_file = os.path.join(path, program)
             if is_exe(exe_file):
                 return exe_file
@@ -109,56 +113,63 @@ if drush_app == None:
 running this from a cronjob, try setting cron's PATH to include the drush \
 application.")
 
-def makeGetRequest(path_info, parameters = {}):
+
+def make_get_request(path_info, parameters=None):
+    if parameters is None:
+        parameters = {}
     parameters['auth_api_token'] = collab_api_token
     parameters['format'] = 'json'
     parameters['path_info'] = path_info
-    r = requests.get(collab_api_url, params = parameters)
+    r = requests.get(collab_api_url, params=parameters)
     if r.status_code == requests.codes.ok:
         return r.json()
     else:
-        #r.raise_for_status() # TODO remove this after testing
         return False
 
-def makePostRequest(path_info, data_payload, parameters = {}):
+
+def make_post_request(path_info, data_payload, parameters=None):
+    if parameters is None:
+        parameters = {}
     parameters['auth_api_token'] = collab_api_token
     parameters['format'] = 'json'
     parameters['path_info'] = path_info
-    r = requests.post(collab_api_url, params = parameters, data = data_payload)
+    r = requests.post(collab_api_url, params=parameters, data=data_payload)
     if r.status_code == requests.codes.ok:
         return r.json()
     else:
-        #r.raise_for_status() # TODO remove this after testing
         return False
 
-def projectTasks():
+
+def project_tasks():
     # Returns open and closed tasks that are not archived
-    result = makeGetRequest('projects/' + str(collab_project_id) + '/tasks')
-    all = dict()
+    result = make_get_request('projects/' + str(collab_project_id) + '/tasks')
+    all_tasks = dict()
     if result:
         for task in result:
             # Use the task_id (relative to the project), not the id (database unique task ID)
-            all[task['task_id']] = {'name': task['name'], 'milestone_id': task['milestone_id']}
-    return all
+            all_tasks[task['task_id']] = {'name': task['name'], 'milestone_id': task['milestone_id']}
+    return all_tasks
 
-def findTaskByName(search_name, tasks):
-    for id, task in tasks.items():
+
+def find_task_by_name(search_name, tasks):
+    for task_id, task in tasks.items():
         if search_name.lower() == task['name'].lower():
             # We have a match on name only
             # If we're checking within a specific milestone, make sure we're limiting to only this milestone
             if collab_milestone_id:
                 if collab_milestone_id == task['milestone_id']:
-                    return id
+                    return task_id
             else:
-                return id
+                return task_id
     return 0
 
-def createTask(name, attributes):
-    validKeys = ['name', 'body', 'visibility', 'category_id', 'label_id',\
-            'milestone_id', 'priority', 'assignee_id', 'other_assignees', 'due_on']
+
+def create_task(task_name, attributes):
+    #valid_keys = ['name', 'body', 'visibility', 'category_id', 'label_id',
+    #              'milestone_id', 'priority', 'assignee_id', 'other_assignees', 'due_on']
     data = dict()
     data['submitted'] = 'submitted'
-    data['task[name]'] = name
+    data['task[name]'] = task_name
     data['task[priority]'] = 0
     data['task[label_id]'] = 0
     if collab_milestone_id:
@@ -167,28 +178,27 @@ def createTask(name, attributes):
         data['task[category_id]'] = collab_category_id
     for key, val in attributes.items():
         data['task[' + key + ']'] = val
-    result = makePostRequest('projects/%s/tasks/add' % collab_project_id, data)
+    result = make_post_request('projects/%s/tasks/add' % collab_project_id, data)
     return result
+
 
 # Process a Drupal directory (dir MUST be a Drupal directory
 # as we're not checking this here!)
-def processDir(dir):
-    os.chdir(dir)
-    LOG.info('Checking "%s" for updates...' % dir)
+def process_dir(directory):
+    os.chdir(directory)
+    LOG.info('Checking "%s" for updates...' % directory)
     drush = subprocess.Popen([drush_app, 'pm-update', '--pipe', '--simulate',
-                             '--security-only'],
-                             stdout=subprocess.PIPE,
-                             )
+                             '--security-only'], stdout=subprocess.PIPE)
     results = drush.stdout.read()
     if results:
         lines = results.split("\n")
         for line in lines:
             if len(line) > 5:
-                task_name = system_name + ' ' + dir + ' ' + line.replace('SECURITY-UPDATE-available', '')
-                task_id = findTaskByName(task_name, tasks)
+                task_name = system_name + ' ' + directory + ' ' + line.replace('SECURITY-UPDATE-available', '')
+                task_id = find_task_by_name(task_name, tasks)
                 if not task_id:
                     attributes = {}
-                    created_task = createTask(task_name, attributes)
+                    created_task = create_task(task_name, attributes)
                     if created_task:
                         task_id = created_task['task_id']
                         LOG.info('Task doesn\'t exist; created new task #%d "%s"' % (task_id, task_name))
@@ -209,17 +219,17 @@ if not os.path.exists(scandir):
 os.chdir(scandir)
 
 # Get all tasks from this project (to quickly check later if task exists)
-tasks = projectTasks()
+tasks = project_tasks()
 if not tasks:
     sys.exit("ERROR: Could not connect to Active Collab and/or get list of tasks within project specified.")
 
 # Traverse into subdirectories until the --traverse depth is reached
 count = 0
-while (count < int(traverse) + 1):
-    count = count + 1
+while count < int(traverse) + 1:
+    count += 1
     wildcards = '*/' * count
     for name in glob.glob(wildcards + 'sites/all/modules'):
-        processDir(name.replace('/sites/all/modules', ''))
+        process_dir(name.replace('/sites/all/modules', ''))
 
 LOG.info('Finished checking sites for required updates.')
 sys.exit()
