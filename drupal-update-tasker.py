@@ -35,7 +35,7 @@ def write_blank_config():
             configfile.write("\n\n# REQUIRED: The system name will be appended to the beginning of the task name.\n# Example: system_name = web122")
             configfile.write("\nsystem_name = ")
             configfile.write("\n\n\n[active_collab_settings]")
-            configfile.write("\n\n# REQUIRED: Your Active Collab API URL.\n# Example: api_url = http://www.ac-projects.com")
+            configfile.write("\n\n# REQUIRED: Your Active Collab API URL.\n# Example: api_url = http://www.ac-projects.com/api.php")
             configfile.write("\napi_url = ")
             configfile.write("\n\n# REQUIRED: Your Active Collab API user token.\n# Example: api_token = 8-349W6U6lsl8W8heJ9We0h3h3BSyoS7n3KJtisotL")
             configfile.write("\napi_token = ")
