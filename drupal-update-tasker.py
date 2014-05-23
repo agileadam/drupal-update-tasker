@@ -120,7 +120,7 @@ def make_get_request(path_info, parameters=None):
     parameters['auth_api_token'] = collab_api_token
     parameters['format'] = 'json'
     parameters['path_info'] = path_info
-    r = requests.get(collab_api_url, params=parameters)
+    r = requests.get(collab_api_url, params=parameters, verify=False)
     if r.status_code == requests.codes.ok:
         return r.json()
     else:
@@ -133,7 +133,7 @@ def make_post_request(path_info, data_payload, parameters=None):
     parameters['auth_api_token'] = collab_api_token
     parameters['format'] = 'json'
     parameters['path_info'] = path_info
-    r = requests.post(collab_api_url, params=parameters, data=data_payload)
+    r = requests.post(collab_api_url, params=parameters, data=data_payload, verify=False)
     if r.status_code == requests.codes.ok:
         return r.json()
     else:
