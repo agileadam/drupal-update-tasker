@@ -18,7 +18,7 @@ formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", "%Y-%m-
 #LOG.addHandler(fh)
 
 # Console logging
-ch = logging.StreamHandler()
+ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.INFO)
 ch.setFormatter(formatter)
 LOG.addHandler(ch)
