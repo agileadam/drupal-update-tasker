@@ -207,14 +207,19 @@ def create_task(task_name, attributes):
 def process_dir(directory):
     os.chdir(directory)
     LOG.info('Checking "%s" for updates...' % directory)
-    drush = subprocess.Popen([drush_app, 'pm-update', '--pipe', '--simulate',
-                             '--security-only'], stdout=subprocess.PIPE)
-    results = drush.stdout.read()
+    drush = subprocess.Popen([drush_app, 'pm-updatestatus', '--security-only'],
+                             stdout=subprocess.PIPE)
+
+    results = drush.communicate()[0]
     if results:
         lines = results.split("\n")
         for line in lines:
-            if len(line) > 5:
-                task_name = system_name + ' ' + directory + ' ' + line.replace('SECURITY-UPDATE-available', '')
+            if "SECURITY UPDATE available" in line:
+                # Before: Views (views)      7.x-3.7       7.x-3.10      SECURITY UPDATE available
+                line = ' '.join(line.replace('SECURITY UPDATE available', '').split())
+                task_name = system_name + ' ' + directory + ' ' + ' => '.join(line.rsplit(' ', 1))
+                #  After: myserver mysite Views (views) 7.x-3.7 => 7.x-3.10
+
                 task_id = find_task_by_name(task_name, tasks)
                 if not task_id:
                     attributes = {}
