@@ -5,6 +5,7 @@ import subprocess
 import glob
 import requests
 import logging
+import re
 from ConfigParser import SafeConfigParser
 
 LOG = logging.getLogger(__name__)
@@ -112,6 +113,25 @@ if drush_app == None:
     sys.exit("ERROR: Could not find the Drush application in $PATH. If you are \
 running this from a cronjob, try setting cron's PATH to include the drush \
 application.")
+
+# For stripping color escape sequences from output
+# Without using this drush's red [error] seems to cause the "mail" binary send the "print" output as a file
+ansi_escape = re.compile(r'\x1b[^m]*m')
+
+drush_version_process = subprocess.Popen([drush_app, 'version', '--pipe'],
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT,
+                         )
+
+# If we cannot even get the version there's probably a major problem, so abort.
+drush_version_result = drush_version_process.communicate()[0]
+
+if "[error]" in drush_version_result:
+    print ansi_escape.sub('', drush_version_result)
+    sys.exit("ERROR: Could not detect drush version. Aborting.")
+
+# Set the major version (just the first character, e.g. 6)
+drush_version = drush_version_result[0]
 
 
 def make_get_request(path_info, parameters=None):
