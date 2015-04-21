@@ -207,6 +207,11 @@ def create_task(task_name, attributes):
 def process_dir(directory):
     os.chdir(directory)
     LOG.info('Checking "%s" for updates...' % directory)
+
+    # Refresh the release info
+    drushrf = subprocess.Popen([drush_app, 'rf'])
+
+    # Check for security updates
     drush = subprocess.Popen([drush_app, 'pm-updatestatus', '--security-only'],
                              stdout=subprocess.PIPE)
 
